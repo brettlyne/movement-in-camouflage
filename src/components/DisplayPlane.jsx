@@ -6,11 +6,20 @@ import { vertexShader, fragmentShader, updateStateVertexShader, updateStateFragm
 /** Fixed inversion / random-state update rate (Hz). */
 const TOGGLE_FREQUENCY_HZ = 30
 
-/** uBackgroundMode in display shader: noise=0, black=1, camouflage=2 */
+/** uBackgroundMode in display shader: noise=0, black=1, camouflage=2, lines=3 */
 function backgroundToUniform(background) {
   if (background === 'black') return 1.0
   if (background === 'camouflage') return 2.0
+  if (background === 'lines') return 3.0
   return 0.0
+}
+
+/** Vertical stripe width (px) for lines background vs Pixel Size control. */
+function lineStripeWidthPx(pixelSize) {
+  const ps = Math.max(1, pixelSize | 0)
+  if (ps === 2 || ps === 4) return 4
+  if (ps === 3 || ps === 1) return 3
+  return ps
 }
 
 export function DisplayPlane({
@@ -52,7 +61,8 @@ export function DisplayPlane({
           uDebugMode: { value: 0 },
           uBlendMode: { value: 0 },
           uExperimentMode: { value: 0 },
-          uBackgroundMode: { value: 0 }
+          uBackgroundMode: { value: 0 },
+          uLineStripeWidth: { value: 4 }
         }
       }),
     []
@@ -221,7 +231,7 @@ export function DisplayPlane({
     gl.clear()
     gl.render(seedScene.scene, seedScene.camera)
     gl.setRenderTarget(null)
-  }, [gl, stateTargetA, stateTargetB, seedScene, statePassResetKey])
+  }, [gl, stateTargetA, stateTargetB, seedScene, statePassResetKey, resetExperimentToken])
 
   useEffect(() => {
     accumulationReadTargetRef.current = accumulationTargetA
@@ -340,9 +350,10 @@ export function DisplayPlane({
     du.uDebugMode.value = debugMode ? 1.0 : 0.0
     du.uStateTexture.value = readTargetRef.current.texture
     du.uAccumTexture.value = accumulationReadTargetRef.current.texture
-    du.uBlendMode.value = blendMode === 'toggle' ? 0.0 : 1.0
+    du.uBlendMode.value = blendMode === 'random' ? 1.0 : 0.0
     du.uExperimentMode.value = experimentColorBuffersEnabled ? 1.0 : 0.0
     du.uBackgroundMode.value = backgroundToUniform(background)
+    du.uLineStripeWidth.value = lineStripeWidthPx(pixelSize)
     /* eslint-enable react-hooks/immutability */
   })
 

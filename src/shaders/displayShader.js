@@ -62,7 +62,9 @@ export const fragmentShader = `
   uniform sampler2D uCamoBase;
   uniform sampler2D uCamoAlt;
   uniform float uTime;
+  uniform vec2 uResolution;
   uniform vec2 uNoiseResolution;
+  uniform float uLineStripeWidth;
   uniform float uDebugMode;
   uniform float uBlendMode;
   uniform float uExperimentMode;
@@ -88,26 +90,37 @@ export const fragmentShader = `
     vec2 noiseUv = (gridCoord + 0.5) / uNoiseResolution;
     float isMaskPresent = step(0.5, mask);
 
-    if (uBlendMode < 0.5) {
-      if (uBackgroundMode < 0.5) {
-        float noise = texture2D(uNoiseTexture, noiseUv).r;
-        float v = mix(noise, 1.0 - noise, isMaskPresent);
-        gl_FragColor = vec4(vec3(v), 1.0);
-      } else if (uBackgroundMode < 1.5) {
-        gl_FragColor = vec4(vec3(mix(0.0, 1.0, isMaskPresent)), 1.0);
+    /* uBlendMode: 0=toggle, 1=random ([0.5,1.5)) */
+    if (uBlendMode > 0.5 && uBlendMode < 1.5) {
+      vec4 st = texture2D(uStateTexture, noiseUv);
+      if (uBackgroundMode > 1.5 && uBackgroundMode < 2.5) {
+        gl_FragColor = vec4(st.rgb, 1.0);
       } else {
-        vec3 base = texture2D(uCamoBase, noiseUv).rgb;
-        vec3 alt = texture2D(uCamoAlt, noiseUv).rgb;
-        gl_FragColor = vec4(mix(base, alt, isMaskPresent), 1.0);
+        gl_FragColor = vec4(vec3(st.r), 1.0);
       }
       return;
     }
 
-    vec4 st = texture2D(uStateTexture, noiseUv);
-    if (uBackgroundMode > 1.5) {
-      gl_FragColor = vec4(st.rgb, 1.0);
+    /* toggle: noise uses outside-inverted / inside-normal; black & camo unchanged; lines always stripe-invert */
+    if (uBackgroundMode < 0.5) {
+      float noise = texture2D(uNoiseTexture, noiseUv).r;
+      float v = mix(1.0 - noise, noise, isMaskPresent);
+      gl_FragColor = vec4(vec3(v), 1.0);
+    } else if (uBackgroundMode < 1.5) {
+      gl_FragColor = vec4(vec3(mix(0.0, 1.0, isMaskPresent)), 1.0);
+    } else if (uBackgroundMode < 2.5) {
+      vec3 base = texture2D(uCamoBase, noiseUv).rgb;
+      vec3 alt = texture2D(uCamoAlt, noiseUv).rgb;
+      gl_FragColor = vec4(mix(base, alt, isMaskPresent), 1.0);
     } else {
-      gl_FragColor = vec4(vec3(st.r), 1.0);
+      /* Same column quantization as noise: one value per mask cell (gridCoord.x). */
+      float cellPx = uResolution.x / max(uNoiseResolution.x, 1.0);
+      float w = max(uLineStripeWidth, 1.0);
+      float colsPerStripe = max(1.0, floor(w / cellPx + 0.5));
+      float band = floor(gridCoord.x / colsPerStripe);
+      float stripe = mod(band, 2.0) < 0.5 ? 0.0 : 1.0;
+      float v = mix(1.0 - stripe, stripe, isMaskPresent);
+      gl_FragColor = vec4(vec3(v), 1.0);
     }
   }
 `

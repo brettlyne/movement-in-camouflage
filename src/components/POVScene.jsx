@@ -74,10 +74,24 @@ export function POVScene() {
     experimentColorBuffersEnabled
   }, set] = useControls(() => ({
     pixelSize: { value: 4, min: 1, max: 50, step: 1, label: 'Pixel Size' },
-    speedX: { value: 2, min: 0, max: 10, step: 0.1, label: 'Speed X' },
-    speedY: { value: 1.5, min: 0, max: 10, step: 0.1, label: 'Speed Y' },
-    isPaused: { value: false, label: 'Paused' },
     followCursor: { value: false, label: 'Follow Cursor' },
+    speedX: {
+      value: 2,
+      min: 0,
+      max: 10,
+      step: 0.1,
+      label: 'Speed X',
+      render: (get) => !get('followCursor')
+    },
+    speedY: {
+      value: 1.5,
+      min: 0,
+      max: 10,
+      step: 0.1,
+      label: 'Speed Y',
+      render: (get) => !get('followCursor')
+    },
+    isPaused: { value: false, label: 'Paused' },
     shapeMode: {
       value: 'cube wireframe',
       options: [
@@ -105,22 +119,45 @@ export function POVScene() {
     },
     background: {
       value: 'noise',
-      options: ['noise', 'black', 'camouflage'],
-      label: 'Background'
+      options: ['noise', 'black', 'camouflage', 'lines'],
+      label: 'Background',
+      render: (get) => !get('experimentColorBuffersEnabled')
     },
     blendMode: {
       value: 'toggle',
       options: ['toggle', 'random'],
-      label: 'Blend Mode'
+      label: 'Blend Mode',
+      render: (get) =>
+        !get('experimentColorBuffersEnabled') && get('background') !== 'lines'
     },
-    debugMode: { value: false, label: 'Debug: Show FBO' },
+    // debugMode: { value: false, label: 'Debug: Show FBO' },
     experimentColorBuffersEnabled: { value: false, label: '🌈' }
   }))
+
+  useEffect(() => {
+    if (blendMode === 'invert') set({ blendMode: 'toggle' })
+  }, [blendMode, set])
+
+  const prevBackgroundRef = useRef(background)
+  useEffect(() => {
+    if (background === 'black' && prevBackgroundRef.current !== 'black') {
+      set({ blendMode: 'random' })
+    }
+    prevBackgroundRef.current = background
+  }, [background, set])
+
+  /** Lines always uses non-random toggle behavior; strip legacy `invert` from stored panel state. */
+  const displayBlendMode =
+    background === 'lines' ? 'toggle' : blendMode === 'invert' ? 'toggle' : blendMode
 
   const [resetExperimentToken, setResetExperimentToken] = useState(0)
 
   useControls({
-    'Reset Buffers': button(() => setResetExperimentToken((value) => value + 1))
+    Clear: {
+      ...button(() => setResetExperimentToken((value) => value + 1)),
+      render: (get) =>
+        get('background') === 'black' || get('experimentColorBuffersEnabled')
+    }
   })
 
   const togglePause = useCallback(() => {
@@ -192,12 +229,12 @@ export function POVScene() {
   }, [background, fboResolution])
 
   const blackSeedTexture = useMemo(() => {
-    if (background !== 'black' || blendMode !== 'random') return null
+    if (background !== 'black' || displayBlendMode !== 'random') return null
     return createBlackDataTexture(fboResolution.width, fboResolution.height)
-  }, [background, blendMode, fboResolution.width, fboResolution.height])
+  }, [background, displayBlendMode, fboResolution.width, fboResolution.height])
 
   const seedTexture = useMemo(() => {
-    if (blendMode === 'random') {
+    if (displayBlendMode === 'random') {
       if (background === 'black' && blackSeedTexture) return blackSeedTexture
       if (background === 'camouflage' && camoPatternTextures) return camoPatternTextures[0]
       return noisePatternTextures[0]
@@ -205,7 +242,7 @@ export function POVScene() {
     if (background === 'camouflage' && camoPatternTextures) return camoPatternTextures[0]
     return noisePatternTextures[0]
   }, [
-    blendMode,
+    displayBlendMode,
     background,
     blackSeedTexture,
     camoPatternTextures,
@@ -285,7 +322,7 @@ export function POVScene() {
     }
   }, [bounds.left, bounds.right, bounds.top, bounds.bottom])
 
-  const statePassResetKey = `${background}-${blendMode}-${renderResetKey}`
+  const statePassResetKey = `${background}-${displayBlendMode}-${renderResetKey}`
 
   return (
     <>
@@ -348,7 +385,7 @@ export function POVScene() {
           gridHeight={fboResolution.height}
           background={background}
           pixelSize={pixelSize}
-          blendMode={blendMode}
+          blendMode={displayBlendMode}
           debugMode={false}
           isPaused={isPaused}
           experimentColorBuffersEnabled={experimentColorBuffersEnabled}
