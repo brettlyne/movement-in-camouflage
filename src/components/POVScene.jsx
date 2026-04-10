@@ -63,6 +63,7 @@ export function POVScene() {
     pixelSize,
     speedX,
     speedY,
+    rotationSpeed,
     isPaused,
     followCursor,
     shapeMode,
@@ -90,6 +91,13 @@ export function POVScene() {
       step: 0.1,
       label: 'Speed Y',
       render: (get) => !get('followCursor')
+    },
+    rotationSpeed: {
+      value: 1,
+      min: 0,
+      max: 10,
+      step: 0.1,
+      label: 'Rotation speed'
     },
     isPaused: { value: false, label: 'Paused' },
     shapeMode: {
@@ -345,6 +353,7 @@ export function POVScene() {
             size={shapeSize}
             strokeThickness={strokeThickness}
             speed={{ x: speedX, y: speedY }}
+            rotationSpeed={rotationSpeed}
             isPaused={isPaused}
             followCursor={followCursor}
             bounds={bounds}

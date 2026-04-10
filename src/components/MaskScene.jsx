@@ -28,6 +28,7 @@ export function MaskScene({
   size,
   strokeThickness,
   speed,
+  rotationSpeed = 1,
   isPaused,
   followCursor,
   bounds
@@ -283,8 +284,10 @@ export function MaskScene({
           position.current.y - lastPosition.current.y
         )
         const movementSpeed = frameDistance / Math.max(delta, EDGE_EPSILON)
-        meshRef.current.rotation.x += delta * movementSpeed * ROTATION_FROM_SPEED_X
-        meshRef.current.rotation.y += delta * movementSpeed * ROTATION_FROM_SPEED_Y
+        meshRef.current.rotation.x +=
+          delta * movementSpeed * ROTATION_FROM_SPEED_X * rotationSpeed
+        meshRef.current.rotation.y +=
+          delta * movementSpeed * ROTATION_FROM_SPEED_Y * rotationSpeed
       }
 
       lastPosition.current.x = position.current.x
@@ -331,8 +334,10 @@ export function MaskScene({
 
     if (geometryType !== 'Follow Arrow') {
       const movementSpeed = Math.hypot(velocity.current.x, velocity.current.y)
-      meshRef.current.rotation.x += delta * movementSpeed * ROTATION_FROM_SPEED_X
-      meshRef.current.rotation.y += delta * movementSpeed * ROTATION_FROM_SPEED_Y
+      meshRef.current.rotation.x +=
+        delta * movementSpeed * ROTATION_FROM_SPEED_X * rotationSpeed
+      meshRef.current.rotation.y +=
+        delta * movementSpeed * ROTATION_FROM_SPEED_Y * rotationSpeed
     }
   })
 
