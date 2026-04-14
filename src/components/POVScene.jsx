@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState, useEffect, useCallback } from 'react'
 import { useThree, useFrame, createPortal } from '@react-three/fiber'
 import { OrthographicCamera } from '@react-three/drei'
-import { useControls, button } from 'leva'
+import { useControls, button, levaStore as defaultLevaStore } from 'leva'
 import * as THREE from 'three'
 import { MaskScene } from './MaskScene'
 import { DisplayPlane } from './DisplayPlane'
@@ -10,6 +10,22 @@ import { createSixNoisePatternTextures } from '../utils/createNoisePatternTextur
 import { generateProceduralCamoImageData } from '../utils/generateProceduralCamo'
 import { imageDataToDataTexture } from '../utils/imageDataToDataTexture'
 import { createBlackDataTexture } from '../utils/createBlackDataTexture'
+
+/** Initial Leva values; merged with presets in App before `store.set`. */
+export const POV_CONTROL_DEFAULTS = {
+  pixelSize: 4,
+  followCursor: false,
+  speedX: 2,
+  speedY: 1.5,
+  rotationSpeed: 3,
+  isPaused: false,
+  shapeMode: 'cube wireframe',
+  shapeSize: 3,
+  strokeThickness: 0.1,
+  background: 'noise',
+  blendMode: 'toggle',
+  experimentColorBuffersEnabled: false
+}
 
 /** Runs after other useFrame hooks (mount last) and before R3F's gl.render. */
 function CanvasPresentPassGuard() {
@@ -43,7 +59,7 @@ function CanvasPresentPassGuard() {
   return null
 }
 
-export function POVScene() {
+export function POVScene({ levaStore = defaultLevaStore } = {}) {
   const { size, gl } = useThree()
   const maskScene = useMemo(() => new THREE.Scene(), [])
   const maskCameraRef = useRef()
@@ -73,11 +89,18 @@ export function POVScene() {
     blendMode,
     background,
     experimentColorBuffersEnabled
-  }, set] = useControls(() => ({
-    pixelSize: { value: 4, min: 1, max: 50, step: 1, label: 'Pixel Size' },
-    followCursor: { value: false, label: 'Follow Cursor' },
+  }, set] = useControls(
+    () => ({
+    pixelSize: {
+      value: POV_CONTROL_DEFAULTS.pixelSize,
+      min: 1,
+      max: 50,
+      step: 1,
+      label: 'Pixel Size'
+    },
+    followCursor: { value: POV_CONTROL_DEFAULTS.followCursor, label: 'Follow Cursor' },
     speedX: {
-      value: 2,
+      value: POV_CONTROL_DEFAULTS.speedX,
       min: 0,
       max: 10,
       step: 0.1,
@@ -85,7 +108,7 @@ export function POVScene() {
       render: (get) => !get('followCursor')
     },
     speedY: {
-      value: 1.5,
+      value: POV_CONTROL_DEFAULTS.speedY,
       min: 0,
       max: 10,
       step: 0.1,
@@ -93,15 +116,15 @@ export function POVScene() {
       render: (get) => !get('followCursor')
     },
     rotationSpeed: {
-      value: 1,
+      value: POV_CONTROL_DEFAULTS.rotationSpeed,
       min: 0,
       max: 10,
       step: 0.1,
       label: 'Rotation speed'
     },
-    isPaused: { value: false, label: 'Paused' },
+    isPaused: { value: POV_CONTROL_DEFAULTS.isPaused, label: 'Paused' },
     shapeMode: {
-      value: 'cube wireframe',
+      value: POV_CONTROL_DEFAULTS.shapeMode,
       options: [
         'cube',
         'cube wireframe',
@@ -113,9 +136,15 @@ export function POVScene() {
       ],
       label: 'Shape'
     },
-    shapeSize: { value: 3, min: 0.1, max: 5, step: 0.1, label: 'Shape Size' },
+    shapeSize: {
+      value: POV_CONTROL_DEFAULTS.shapeSize,
+      min: 0.1,
+      max: 5,
+      step: 0.1,
+      label: 'Shape Size'
+    },
     strokeThickness: {
-      value: 0.1,
+      value: POV_CONTROL_DEFAULTS.strokeThickness,
       min: 0.01,
       max: 1.0,
       step: 0.01,
@@ -126,21 +155,26 @@ export function POVScene() {
       }
     },
     background: {
-      value: 'noise',
+      value: POV_CONTROL_DEFAULTS.background,
       options: ['noise', 'black', 'camouflage', 'lines'],
       label: 'Background',
       render: (get) => !get('experimentColorBuffersEnabled')
     },
     blendMode: {
-      value: 'toggle',
+      value: POV_CONTROL_DEFAULTS.blendMode,
       options: ['toggle', 'random'],
       label: 'Blend Mode',
       render: (get) =>
         !get('experimentColorBuffersEnabled') && get('background') !== 'lines'
     },
     // debugMode: { value: false, label: 'Debug: Show FBO' },
-    experimentColorBuffersEnabled: { value: false, label: '🌈' }
-  }))
+    experimentColorBuffersEnabled: {
+      value: POV_CONTROL_DEFAULTS.experimentColorBuffersEnabled,
+      label: '🌈'
+    }
+    }),
+    { store: levaStore }
+  )
 
   useEffect(() => {
     if (blendMode === 'invert') set({ blendMode: 'toggle' })
@@ -160,13 +194,16 @@ export function POVScene() {
 
   const [resetExperimentToken, setResetExperimentToken] = useState(0)
 
-  useControls({
-    Clear: {
-      ...button(() => setResetExperimentToken((value) => value + 1)),
-      render: (get) =>
-        get('background') === 'black' || get('experimentColorBuffersEnabled')
-    }
-  })
+  useControls(
+    {
+      Clear: {
+        ...button(() => setResetExperimentToken((value) => value + 1)),
+        render: (get) =>
+          get('background') === 'black' || get('experimentColorBuffersEnabled')
+      }
+    },
+    { store: levaStore }
+  )
 
   const togglePause = useCallback(() => {
     set({ isPaused: !isPaused })

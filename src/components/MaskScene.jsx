@@ -28,7 +28,7 @@ export function MaskScene({
   size,
   strokeThickness,
   speed,
-  rotationSpeed = 1,
+  rotationSpeed = 3,
   isPaused,
   followCursor,
   bounds
