@@ -8,6 +8,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: '/labs/motion-in-camouflage/',
+  build: {
+    chunkSizeWarningLimit: 2000,
+  },
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {

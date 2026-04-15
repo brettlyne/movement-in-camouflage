@@ -71,6 +71,15 @@
   h1, h2, h3, h4, h5, h6{
     @apply font-heading;
   }
+
+  a {
+    text-decoration-line: underline;
+    text-underline-offset: 2px;
+  }
+
+  a:hover {
+    text-decoration-style: double;
+  }
 }
 
 @custom-variant dark (&:is(.dark *));

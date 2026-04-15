@@ -1,16 +1,16 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { Canvas } from '@react-three/fiber'
-import { useCreateStore, LevaPanel } from 'leva'
-import { POVScene, POV_CONTROL_DEFAULTS } from './components/POVScene'
-import { ChevronsDownUp, ChevronsUpDown } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Canvas } from "@react-three/fiber";
+import { useCreateStore, LevaPanel } from "leva";
+import { POVScene, POV_CONTROL_DEFAULTS } from "./components/POVScene";
+import { ChevronsDownUp, ChevronsUpDown } from "lucide-react";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -18,158 +18,158 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
-import './App.css'
+} from "@/components/ui/dialog";
+import "./App.css";
 
 const PRESETS = [
   {
-    title: 'Bouncing Cube',
+    title: "Bouncing Cube",
     values: { strokeThickness: 0.05 },
   },
   {
-    title: 'Tetrahedron in Camouflage',
+    title: "Tetrahedron in Camouflage",
     values: {
       pixelSize: 2,
       rotationSpeed: 3,
       speedX: 1.7,
       speedY: 2.7,
-      shapeMode: 'tetrahedron wireframe',
+      shapeMode: "tetrahedron wireframe",
       shapeSize: 4.0,
       strokeThickness: 0.4,
-      background: 'camouflage',
+      background: "camouflage",
     },
   },
   {
-    title: 'Arrow Follows Your Cursor',
-    description: 'Move your cursor around the page to see the effect.',
+    title: "Arrow Follows Your Cursor",
+    description: "Move your cursor around the page to see the effect.",
     values: {
       pixelSize: 8,
       followCursor: true,
-      shapeMode: 'arrow',
+      shapeMode: "arrow",
       shapeSize: 2,
     },
   },
   {
-    title: 'Inverted Circle on Lines',
+    title: "Inverted Circle on Lines",
     values: {
       pixelSize: 24,
       speedX: 1.5,
       speedY: 1.9,
-      shapeMode: 'sphere',
+      shapeMode: "sphere",
       shapeSize: 2.5,
-      background: 'lines',
+      background: "lines",
     },
   },
   {
-    title: 'Rainbow Donut',
+    title: "Rainbow Donut",
     values: {
       pixelSize: 6,
       speedX: 2,
       speedY: 1.5,
       rotationSpeed: 3.5,
-      shapeMode: 'torus',
+      shapeMode: "torus",
       shapeSize: 3,
       experimentColorBuffersEnabled: true,
     },
   },
-]
+];
 
 /** Stable ref so Leva does not re-apply `titleBar.position` on every parent re-render (e.g. preset changes). */
-const LEVA_TITLE_BAR = { position: { x: 0, y: 80 } }
+const LEVA_TITLE_BAR = { position: { x: 0, y: 80 } };
 
 function App() {
-  const levaStore = useCreateStore()
-  const containerRef = useRef(null)
+  const levaStore = useCreateStore();
+  const containerRef = useRef(null);
   /** `null` = not measured yet; `'-1'` = resizing (canvas unmounted); otherwise `${w}x${h}` */
-  const [canvasKey, setCanvasKey] = useState(null)
-  const lastCommittedRef = useRef({ w: 0, h: 0 })
-  const hasInitialSettleRef = useRef(false)
-  const settleTimerRef = useRef(null)
+  const [canvasKey, setCanvasKey] = useState(null);
+  const lastCommittedRef = useRef({ w: 0, h: 0 });
+  const hasInitialSettleRef = useRef(false);
+  const settleTimerRef = useRef(null);
 
-  const [showAdvanced, setShowAdvanced] = useState(false)
-  const [panelExpanded, setPanelExpanded] = useState(true)
-  const [presetIndex, setPresetIndex] = useState(0)
-  const [photosensitivityOpen, setPhotosensitivityOpen] = useState(true)
-  const [sceneStarted, setSceneStarted] = useState(false)
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [panelExpanded, setPanelExpanded] = useState(true);
+  const [presetIndex, setPresetIndex] = useState(0);
+  const [photosensitivityOpen, setPhotosensitivityOpen] = useState(true);
+  const [sceneStarted, setSceneStarted] = useState(false);
 
   const applyPresetIndex = useCallback(
     (index) => {
-      const preset = PRESETS[index]
-      if (!preset) return
-      setPresetIndex(index)
+      const preset = PRESETS[index];
+      if (!preset) return;
+      setPresetIndex(index);
       const run = () => {
-        levaStore.set({ ...POV_CONTROL_DEFAULTS, ...preset.values }, false)
-      }
+        levaStore.set({ ...POV_CONTROL_DEFAULTS, ...preset.values }, false);
+      };
       requestAnimationFrame(() => {
-        requestAnimationFrame(run)
-      })
+        requestAnimationFrame(run);
+      });
     },
-    [levaStore]
-  )
+    [levaStore],
+  );
 
   useEffect(() => {
-    applyPresetIndex(presetIndex)
+    applyPresetIndex(presetIndex);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- initial Leva sync (carousel used onSelect on mount)
-  }, [])
+  }, []);
 
   useEffect(() => {
-    if (!canvasKey || canvasKey === '-1') return
-    applyPresetIndex(presetIndex)
-  }, [canvasKey, presetIndex, applyPresetIndex])
+    if (!canvasKey || canvasKey === "-1") return;
+    applyPresetIndex(presetIndex);
+  }, [canvasKey, presetIndex, applyPresetIndex]);
 
   useEffect(() => {
-    const el = containerRef.current
-    if (!el) return
+    const el = containerRef.current;
+    if (!el) return;
 
     const ro = new ResizeObserver((entries) => {
-      const cr = entries[0]?.contentRect
-      if (!cr || cr.width < 1 || cr.height < 1) return
-      const w = Math.round(cr.width)
-      const h = Math.round(cr.height)
-      const { w: cw, h: ch } = lastCommittedRef.current
+      const cr = entries[0]?.contentRect;
+      if (!cr || cr.width < 1 || cr.height < 1) return;
+      const w = Math.round(cr.width);
+      const h = Math.round(cr.height);
+      const { w: cw, h: ch } = lastCommittedRef.current;
 
       if (!hasInitialSettleRef.current) {
-        hasInitialSettleRef.current = true
-        lastCommittedRef.current = { w, h }
-        setCanvasKey(`${w}x${h}`)
-        return
+        hasInitialSettleRef.current = true;
+        lastCommittedRef.current = { w, h };
+        setCanvasKey(`${w}x${h}`);
+        return;
       }
 
-      const sameAsCommitted = w === cw && h === ch
+      const sameAsCommitted = w === cw && h === ch;
       // If size matches committed and we're not mid-debounce, ignore duplicate RO events.
-      if (sameAsCommitted && settleTimerRef.current == null) return
+      if (sameAsCommitted && settleTimerRef.current == null) return;
 
-      setCanvasKey('-1')
+      setCanvasKey("-1");
       if (settleTimerRef.current != null) {
-        clearTimeout(settleTimerRef.current)
+        clearTimeout(settleTimerRef.current);
       }
       settleTimerRef.current = setTimeout(() => {
-        settleTimerRef.current = null
-        lastCommittedRef.current = { w, h }
-        setCanvasKey(`${w}x${h}`)
-      }, 500)
-    })
+        settleTimerRef.current = null;
+        lastCommittedRef.current = { w, h };
+        setCanvasKey(`${w}x${h}`);
+      }, 500);
+    });
 
-    ro.observe(el)
+    ro.observe(el);
     return () => {
-      ro.disconnect()
+      ro.disconnect();
       if (settleTimerRef.current != null) {
-        clearTimeout(settleTimerRef.current)
+        clearTimeout(settleTimerRef.current);
       }
-    }
-  }, [])
+    };
+  }, []);
 
   return (
     <>
       <Dialog
         open={photosensitivityOpen}
         onOpenChange={(open) => {
-          if (open) setPhotosensitivityOpen(true)
+          if (open) setPhotosensitivityOpen(true);
         }}
       >
         <form
           onSubmit={(e) => {
-            e.preventDefault()
+            e.preventDefault();
           }}
         >
           <DialogContent
@@ -190,8 +190,8 @@ function App() {
                 type="button"
                 variant="neutral"
                 onClick={() => {
-                  setPhotosensitivityOpen(false)
-                  setSceneStarted(true)
+                  setPhotosensitivityOpen(false);
+                  setSceneStarted(true);
                 }}
               >
                 Continue
@@ -208,26 +208,44 @@ function App() {
       <div
         ref={containerRef}
         style={{
-          width: '100vw',
-          height: '100vh',
-          position: 'fixed',
+          width: "100vw",
+          height: "100vh",
+          position: "fixed",
           top: 0,
           left: 0,
-          overflow: 'hidden',
+          overflow: "hidden",
         }}
       >
         <Card
           className={`absolute right-4 top-4 z-10 w-88 pointer-events-auto bg-main p-5 px-1`}
         >
-          <CardHeader className={panelExpanded ? 'space-y-2' : 'gap-0'}>
+          <CardHeader className={panelExpanded ? "space-y-2" : "gap-0"}>
             <CardTitle className="pe-14">Motion in Camouflage</CardTitle>
             {panelExpanded ? (
-              <CardDescription className="text-muted-foreground leading-relaxed">
+              <CardDescription className="text-muted-foreground leading-relaxed font-normal">
                 This demo shows the effect of movement within camouflage. Click
                 anywhere to pause the animation and the shape will disappear
-                (not true for the last 2 experimental presets). I saw a
-                similar demo to this and thought it would be fun to be able to try
-                some different interactions and settings.
+                (not true for the last 2 experimental presets). I saw a{" "}
+                <a
+                  href="https://optical.toys/persistance-of-vision-static-cube/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  similar demo
+                </a>{" "}
+                to this and thought it would be fun to be able to try some
+                different interactions and settings.
+                <p className="mt-2">
+                See{" "}
+                <a
+                  href="/blog/motion-in-camouflage"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  the blog post
+                </a>{" "}
+                for more details.
+                </p>
               </CardDescription>
             ) : null}
           </CardHeader>
@@ -252,7 +270,7 @@ function App() {
                         className="min-w-6 shrink-0 text-center text-base leading-snug"
                         aria-hidden
                       >
-                        {presetIndex === i ? '✅' : ''}
+                        {presetIndex === i ? "✅" : ""}
                       </span>
                       <span className="flex-1 text-left">{preset.title}</span>
                     </Button>
@@ -266,18 +284,18 @@ function App() {
               </div>
               <Button
                 type="button"
-                variant={showAdvanced ? 'neutral' : 'default'}
+                variant={showAdvanced ? "neutral" : "default"}
                 size="sm"
                 className="w-fit"
                 onClick={() => {
                   setShowAdvanced((prev) => {
-                    const next = !prev
-                    if (next) setPanelExpanded(false)
-                    return next
-                  })
+                    const next = !prev;
+                    if (next) setPanelExpanded(false);
+                    return next;
+                  });
                 }}
               >
-                {showAdvanced ? 'Hide advanced controls' : 'Advanced controls'}
+                {showAdvanced ? "Hide advanced controls" : "Advanced controls"}
               </Button>
             </CardContent>
           ) : null}
@@ -287,7 +305,7 @@ function App() {
             size="icon"
             className="absolute right-2 top-2 z-1 size-9 shrink-0 rounded-full"
             aria-expanded={panelExpanded}
-            aria-label={panelExpanded ? 'Minimize panel' : 'Expand panel'}
+            aria-label={panelExpanded ? "Minimize panel" : "Expand panel"}
             onClick={() => setPanelExpanded((v) => !v)}
           >
             {panelExpanded ? (
@@ -297,11 +315,11 @@ function App() {
             )}
           </Button>
         </Card>
-   
-        {sceneStarted && canvasKey && canvasKey !== '-1' ? (
+
+        {sceneStarted && canvasKey && canvasKey !== "-1" ? (
           <Canvas
             key={canvasKey}
-            style={{ width: '100%', height: '100%' }}
+            style={{ width: "100%", height: "100%" }}
             dpr={[1, 2]}
             resize={{ scroll: false, debounce: { scroll: 0, resize: 0 } }}
           >
@@ -310,7 +328,7 @@ function App() {
         ) : null}
       </div>
     </>
-  )
+  );
 }
 
-export default App
+export default App;
